@@ -7,7 +7,7 @@ const { createWorker } = require('tesseract.js');
   const worker = await createWorker('eng');
 
   // Launch browser
-  const browser = await puppeteer.launch({ headless: false }); // Set to true to run headless
+  const browser = await puppeteer.launch({ devtools: true }); // Set to true to run headless
   const page = await browser.newPage();
 
   // 1. Navigate to the clinic website and log in
@@ -46,10 +46,17 @@ const { createWorker } = require('tesseract.js');
    * <input value="  點選預約  ">
    */
   // So we take short cut to select only button with type=submit
-  await page.click("xpath=//input[@type='submit']");
+  // await page.click("xpath=//input[@type='submit']");
+  const submitButton = await page.waitForSelector(
+    'xpath=//input[@type="submit"]'
+  );
+  await submitButton.click();
+  await page.waitForNavigation();
 
+  //--------------------------Next Page ----------------------------
   // Fill in the form
   // Enter ID
+  await page.waitForSelector('xpath=//input[@name="txtIdentityCard"]');
   await page.type(
     `xpath=//input[@name="txtIdentityCard"]`,
     `${process.env.txtIdentityCard}`
@@ -72,10 +79,39 @@ const { createWorker } = require('tesseract.js');
   //Enter the security text
   await page.type(`xpath=//input[@name="TextBox5"]`, text);
 
-  // Submit the form
-  await page.click("xpath=//input[@type='submit']");
+  try {
+    await page.click('xpath=//input[@type="submit"]');
+    // await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 10000 });
+    await page.waitForNavigation();
+    await page.waitForFunction('document.querySelector("#lbTele") !== null', {
+      timeout: 20000,
+    });
+  } catch (error) {
+    console.log(error.textContent);
+    // when the context was destroyed, refresh the page
+    await page.reload({ waitUntil: 'networkidle0' });
+    console.log('----here-----');
+    await page.waitForSelector('xpath=//a[text()="13診-徐維偵"]');
+    await page.click('xpath=//a[text()="13診-徐維偵"]')[0];
+    await page.waitForNavigation();
+    console.log('----here2-----');
+    await page.reload({ waitUntil: 'networkidle0' });
+    console.log('----here3-----');
 
-  setTimeout(() => {}, 5000);
+    setTimeout(() => {}, 20000);
+  }
+
+  // wait for 10sec
+
+  // Use one doctor with active link as an example
+  // To complete the sign up circle
+  // Then remove the appointment
+  await page.click('xpath=//a[text()="13診-徐維偵"]')[0];
+
+  // Then test whether headless mode also works
+
+  // Key: test for the case to check polling actually gets the newly activated link
+
   // Optionally take a screenshot of the confirmation
   await page.screenshot({ path: 'booking-confirmation.png' });
 
