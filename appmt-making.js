@@ -1,7 +1,11 @@
 require('dotenv').config();
 const puppeteer = require('puppeteer');
+const { createWorker } = require('tesseract.js');
 
 (async () => {
+  // start OCR worker
+  const worker = await createWorker('eng');
+
   // Launch browser
   const browser = await puppeteer.launch({ headless: false }); // Set to true to run headless
   const page = await browser.newPage();
@@ -50,9 +54,28 @@ const puppeteer = require('puppeteer');
     `xpath=//input[@name="txtIdentityCard"]`,
     `${process.env.txtIdentityCard}`
   );
+  // Enter Bday
+  await page.type(
+    `xpath=//input[@name="txtBirthDay"]`,
+    `${process.env.txtBirthDay}`
+  );
+
+  // Recognise the text on the image with OCR to pass the machine test
+  const securityImg = await page.$('#captcha');
+  await securityImg.screenshot({ path: 'securityImg.png' });
+  const {
+    data: { text },
+  } = await worker.recognize('securityImg.png');
+  console.log(text);
+  await worker.terminate();
+
+  //Enter the security text
+  await page.type(`xpath=//input[@name="TextBox5"]`, text);
+
+  // Submit the form
+  await page.click("xpath=//input[@type='submit']");
 
   setTimeout(() => {}, 5000);
-
   // Optionally take a screenshot of the confirmation
   await page.screenshot({ path: 'booking-confirmation.png' });
 
@@ -103,7 +126,7 @@ const puppeteer = require('puppeteer');
   console.log('Booking Confirmed:', confirmationMessage);
 
   // Optionally take a screenshot of the confirmation
-  await page.screenshot({ path: 'booking-confirmation.png' });
+  // await page.screenshot({ path: 'booking-confirmation.png' });
 
   // Close the browser
   await browser.close();
