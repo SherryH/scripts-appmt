@@ -1,3 +1,4 @@
+require('dotenv').config();
 const puppeteer = require('puppeteer');
 
 (async () => {
@@ -43,8 +44,20 @@ const puppeteer = require('puppeteer');
   // So we take short cut to select only button with type=submit
   await page.click("xpath=//input[@type='submit']");
 
+  // Fill in the form
+  // Enter ID
+  await page.type(
+    `xpath=//input[@name="txtIdentityCard"]`,
+    `${process.env.txtIdentityCard}`
+  );
+
+  setTimeout(() => {}, 5000);
+
   // Optionally take a screenshot of the confirmation
   await page.screenshot({ path: 'booking-confirmation.png' });
+
+  // Close the browser
+  await browser.close();
 
   //----------------------------------
 
