@@ -1,0 +1,14 @@
+{
+  "name": "dr-appmt",
+  "version": "1.0.0",
+  "description": "Helping making appointment",
+  "main": "appmt-making.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "SherryH",
+  "license": "ISC",
+  "dependencies": {
+    "puppeteer": "^23.2.1"
+  }
+}
