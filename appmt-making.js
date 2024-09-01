@@ -2,6 +2,11 @@ require('dotenv').config();
 const puppeteer = require('puppeteer');
 const { createWorker } = require('tesseract.js');
 
+// NOTE: This script fails at the page of Choose doctor appmt slot
+// It is unclear why it complains about the context being destroyed when navigating to that page
+// And the 2nd try catch block does not catch the error
+// Try to use a different library like PlayWright to continue investigation
+
 (async () => {
   // start OCR worker
   const worker = await createWorker('eng');
@@ -79,26 +84,45 @@ const { createWorker } = require('tesseract.js');
   //Enter the security text
   await page.type(`xpath=//input[@name="TextBox5"]`, text);
 
+  // After adding page.waitForSelector and page.waitForNavigation in all above
+  // Still getting the context destroyed execution error
+  // Therefore wrapping the following in try/catch to catch the error
   try {
     await page.click('xpath=//input[@type="submit"]');
     // await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 10000 });
     await page.waitForNavigation();
+
+    //----------------- Next Page: Choose doctor appmt slot -----------------
     await page.waitForFunction('document.querySelector("#lbTele") !== null', {
       timeout: 20000,
     });
   } catch (error) {
-    console.log(error.textContent);
     // when the context was destroyed, refresh the page
-    await page.reload({ waitUntil: 'networkidle0' });
+    // await page.reload({ waitUntil: 'networkidle0' });
     console.log('----here-----');
-    await page.waitForSelector('xpath=//a[text()="13診-徐維偵"]');
-    await page.click('xpath=//a[text()="13診-徐維偵"]')[0];
-    await page.waitForNavigation();
-    console.log('----here2-----');
-    await page.reload({ waitUntil: 'networkidle0' });
-    console.log('----here3-----');
 
-    setTimeout(() => {}, 20000);
+    try {
+      // it is very strange that I kept getting this selector not found error
+      // so wrapping this in try catch to avoid this error
+      await page.waitForSelector('xpath=//a[text()="13診-徐維偵"]');
+      await delay(3000);
+
+      await console.log('----here2-----');
+      await page.click('xpath=//a[text()="13診-徐維偵"]')[0];
+      await page.waitForNavigation();
+      console.log('----here3-----');
+    } catch (error) {
+      console.log('----here4-----');
+      console.log(error);
+      // the click worked! it navigated to the next page!
+      // but the context gets destroyed as soon as the page is navigated
+      await delay(3000);
+
+      // await page.reload({ waitUntil: 'networkidle0' }); // calling page.reload actually destroyed context
+
+      delay(3000);
+    }
+    console.log('----here5-----');
   }
 
   // wait for 10sec
@@ -168,6 +192,8 @@ const { createWorker } = require('tesseract.js');
   await browser.close();
 })();
 
-function isNodeList(obj) {
-  return obj instanceof NodeList;
+function delay(time) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, time);
+  });
 }
